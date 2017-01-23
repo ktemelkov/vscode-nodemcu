@@ -120,11 +120,29 @@ export class NodeMcuCommands {
         context.subscriptions.push(commands.registerCommand('nodemcu.uploadProject', () => {
             workspace.findFiles("**/*", "**/.*/**").then((files: vscode.Uri[]) => {
                 if (files.length > 0) {
-                    vscode.window.showWarningMessage('Upload ' + files.length + ' file(s) to device?', 'Confirm').then(val => {
-                        if (val === 'Confirm') {
-                            this.uploadProject(files, 0);
-                        }
-                    });                    
+
+                    let mcuIgnore: string = path.join(workspace.rootPath, ".mcuignore");
+                    
+                    if (fs.existsSync(mcuIgnore)) {
+                        let ignore: string = fs.readFileSync(mcuIgnore, "utf8");
+                        let ignoreList = ignore.split(/\r?\n/);
+
+                        ignoreList.forEach((value: string, index: number, array: string[]): void => { array[index] = path.join(workspace.rootPath, value); });
+
+                        files = files.filter((value: vscode.Uri, index: number, array: vscode.Uri[]): boolean => {
+                            return ignoreList.find((val: string, idx: number, obj: string[]): boolean => {
+                                return (val == value.fsPath);
+                            }) == undefined;
+                        });
+                    }
+
+                    if (files.length > 0) {
+                        vscode.window.showWarningMessage('Upload ' + files.length + ' file(s) to device?', 'Confirm').then(val => {
+                            if (val === 'Confirm') {
+                                this.uploadProject(files, 0);
+                            }
+                        });
+                    }
                 }
             });
         }));
